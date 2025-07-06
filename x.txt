@@ -1,0 +1,2 @@
+Tailwind v3: Use darkMode: 'class' in config + classList.add('dark') 
+Tailwind v4: Use @theme directive in CSS + color-scheme property , isme setattribute krne hote hai

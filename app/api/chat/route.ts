@@ -90,6 +90,8 @@ Requirements:
 - Make it educational and clear
 - Return ONLY the Python code, no markdown or explanations
 - Replace all MathTex(...) calls with Text(...).
+- get_edge_center(direction) returns a 3D coordinate (numpy.ndarray) on the edge of the object in the specified direction.
+- get_edge(...) was deprecated and causes the getter() TypeError you’re seeing
 Topic: ${msg}`
 
         const result = await chat.sendMessage(enhancedPrompt)
