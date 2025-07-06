@@ -105,17 +105,36 @@ Topic: ${msg}`
        
 
         // Forward request to Flask backend
-        const resp = await axios.post('http://localhost:5000/render-video', {
+        const res  = await axios.post('http://localhost:5000/render-video', {
         script: text,
         filename: "Video"
         });
-        console.log(resp);
-
-    
+        let data = res.data;
+        console.log(data);
+        if(!data.success) {
+            return NextResponse.json({
+                success:false, 
+                url:null,
+                message:"Manim Didn't respond"
+            })
+        }  
+        console.log(1)
+        console.log(data.video_filename)
+        const resp = await axios.get(`http://localhost:5000/video/${data.video_filename}`)
+        let dataa = resp.data;
+        console.log(dataa)
+        if(!dataa.success) {
+            return NextResponse.json({
+                success:false, 
+                url : null,
+                message:"SupaBase Didn't respond"
+            })
+        }  
 
         return NextResponse.json({ 
-            response: text,
-            type: 'manim_script'
+            success:true,
+            url:dataa.url,
+            message: 'Here is your video'
         })
         
     } catch (e) {

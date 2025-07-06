@@ -6,6 +6,7 @@ interface Message{
   id:string
   content : string
   role : 'user' | 'assistant'
+  isV : boolean
   timestamp : Date
 }
 export default function MainPage() {
@@ -47,6 +48,7 @@ export default function MainPage() {
       id: Date.now().toString(),
       content: input.trim(),
       role: 'user',
+      isV:false,
       timestamp: new Date()
     }
 
@@ -61,7 +63,7 @@ export default function MainPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: input.trim(),
+          msg: input.trim(),
           history: msgs
         }),
       })
@@ -71,20 +73,35 @@ export default function MainPage() {
       }
 
       const data = await response.json()
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response,
-        role: 'assistant',
-        timestamp: new Date()
+      console.log(data)
+      if(data.success){
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: data.url,
+          isV:true,
+          role: 'assistant',
+          timestamp: new Date()
+        }
+        setMsgs(prev => [...prev, assistantMessage])
+      }
+      else{
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: data.message,
+          isV:false,
+          role: 'assistant',
+          timestamp: new Date()
+        }
+        setMsgs(prev => [...prev, assistantMessage])
       }
 
-      setMsgs(prev => [...prev, assistantMessage])
+      
     } catch (error) {
       console.error('Error:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: 'Sorry, I encountered an error. Please try again.',
+        isV:false,
         role: 'assistant',
         timestamp: new Date()
       }
@@ -137,7 +154,16 @@ export default function MainPage() {
                   }
                 </div>
                 <div className={`px-4 py-3 rounded-2xl ${msg.role =='user'?'bg-blue-500 text-white':'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'}`}>
-                  <p className='whitespace-pre-wrap'> Message Content {msg.content}</p>
+                  {
+                    msg.isV ? (<video controls className="max-w-md rounded-lg">
+                      <source src={msg.content} type="video/mp4" />
+                      Your browser does not support the video tag.
+                      </video>):(
+                      <p className='whitespace-pre-wrap'>{msg.content}</p>
+                      )
+                  }
+                  
+                 
                 </div>
               </div>
             </div>
