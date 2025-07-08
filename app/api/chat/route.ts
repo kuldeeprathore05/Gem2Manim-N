@@ -91,8 +91,6 @@ Requirements:
 - Return ONLY the Python code, no markdown or explanations
 - Replace all MathTex(...) calls with Text(...).
 - get_edge_center(direction) returns a 3D coordinate (numpy.ndarray) on the edge of the object in the specified direction.
-- get_edge(...) was deprecated and causes the getter() TypeError you’re seeing
-- You likely want to animate objects along a line or curved path. Use Line() or CubicBezier() instead of Path()
 - "Generate a valid Manim script compatible with Manim version 0.19.0. Avoid using unsupported keyword arguments like time_width, num_corners, or experimental features. The script should work with standard classes like Scene, Text, Circle, Square, AnimationGroup, FadeIn, Transform, etc. Ensure no errors during rendering."
 Topic: ${msg}`
 
