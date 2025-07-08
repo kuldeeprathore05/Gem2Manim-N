@@ -15,6 +15,15 @@ IMPORTANT RULES:
 6. Use appropriate colors and positioning
 7. Make animations smooth and educational
 8. Always end with self.wait() for proper video rendering
+9. Each element should appear one at a time.
+
+10. Remove previous elements using FadeOut() or ReplacementTransform() before showing the next.
+
+11. Ensure the screen is not cluttered — no overlapping text or shapes.
+
+12. Use AnimationGroup and lag_ratio for multiple element animations.
+
+13 The script should be compatible with Manim Community Edition v0.19.0.
 
 Example structure:
 from manim import *
@@ -69,7 +78,7 @@ export async function POST(request: NextRequest) {
             chatHistory.push(...formattedHistory)
         }
 
-        const chat = model.startChat({
+        const chat = await model.startChat({
             history: chatHistory,
             generationConfig: {
                 maxOutputTokens: 2000,
