@@ -23,7 +23,8 @@ IMPORTANT RULES:
 
 12. Use AnimationGroup and lag_ratio for multiple element animations.
 
-13 The script should be compatible with Manim Community Edition v0.19.0.
+13. The script should be compatible with Manim Community Edition v0.19.0.
+14. Do NOT use MathTex or Tex. Only use Text(...) for text objects. Do not require LaTeX.
 
 Example structure:
 from manim import *
