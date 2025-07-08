@@ -127,7 +127,7 @@ Topic: ${msg}`
         script: text,
         filename: "Video"
         });
-        let data = res.data;
+        const data = res.data;
         console.log(data);
         if(!data.success) {
             return NextResponse.json({
@@ -139,7 +139,7 @@ Topic: ${msg}`
         console.log(1)
         console.log(data.video_filename)
         const resp = await axios.get(`https://gem2manim-f.onrender.com/video/${data.video_filename}`)
-        let dataa = resp.data;
+        const dataa = resp.data;
         console.log(dataa)
         if(!dataa.success) {
             return NextResponse.json({
