@@ -20,12 +20,18 @@ IMPORTANT RULES:
 11. Ensure the screen is not cluttered — no overlapping text or shapes.
 12. Use AnimationGroup and lag_ratio for multiple element animations.
 13. The script should be compatible with Manim Community Edition v0.19.0.
-14. Do NOT use MathTex or Tex. Only use Text(...) for text objects. Do not require LaTeX.
 15. Never use MathTex or Tex. Use only Text(...). Do not use LaTeX.
-16.  Never use DecimalNumber. Use Text(str(number)) or Text(...) for labels.
-17.  When creating number lines or axes, use .label_constructor = lambda val: Text(str(val), font_size=24)
+16. Never use DecimalNumber. Use Text(str(number)) or Text(...) for labels.
+16. For Axes and NumberLine, set include_numbers=False, and use Text(...) manually for any required labels.
 18. Ensure the entire script works without any LaTeX installed. Render environments do not support LaTeX.
-
+19. Skip preview generation
+20. Use simple shapes only (no complex geometries)
+21. Minimal text elements
+22. Single color scheme to reduce processing
+23. Systematic layout - specific positioning guidelines
+24. Faster rendering - reduced wait times and combined animations
+25. Visual clarity - proper spacing and contrast
+26. Streamlined flow - fewer transitions, essential elements only
 Example structure:
 from manim import *
 
