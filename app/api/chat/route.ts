@@ -16,15 +16,15 @@ IMPORTANT RULES:
 7. Make animations smooth and educational
 8. Always end with self.wait() for proper video rendering
 9. Each element should appear one at a time.
-
 10. Remove previous elements using FadeOut() or ReplacementTransform() before showing the next.
-
 11. Ensure the screen is not cluttered — no overlapping text or shapes.
-
 12. Use AnimationGroup and lag_ratio for multiple element animations.
-
 13. The script should be compatible with Manim Community Edition v0.19.0.
 14. Do NOT use MathTex or Tex. Only use Text(...) for text objects. Do not require LaTeX.
+15. Never use MathTex or Tex. Use only Text(...). Do not use LaTeX.
+16.  Never use DecimalNumber. Use Text(str(number)) or Text(...) for labels.
+17.  When creating number lines or axes, use .label_constructor = lambda val: Text(str(val), font_size=24)
+18. Ensure the entire script works without any LaTeX installed. Render environments do not support LaTeX.
 
 Example structure:
 from manim import *
