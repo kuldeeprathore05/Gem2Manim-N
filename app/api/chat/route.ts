@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import Video from '../../../models/Video'
+import User from '../../../models/User'
+import connectDb from "@/config/database";
+import { inngest } from "@/inngest/client";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 const MANIM_SYSTEM_PROMPT = `
@@ -46,7 +50,10 @@ Focus on creating clear, educational visualizations that help understand the con
 export async function POST(request: NextRequest) {
     console.log("Manim API Request")
     try {
-        const { msg, history } = await request.json()
+        const info = await request.json()
+        const msg = info.msg;
+        const history = info.history;
+        const user = info.user;
         console.log("User message:", msg)
         
         if (!msg) {
@@ -98,17 +105,17 @@ export async function POST(request: NextRequest) {
         
         const enhancedPrompt = `Generate a complete Manim script to visualize: ${msg}
 
-Requirements:
-- Create a working Python class that inherits from Scene
-- Use proper Manim imports and syntax
-- Include step-by-step animation with explanations
-- Use appropriate colors and positioning
-- Make it educational and clear
-- Return ONLY the Python code, no markdown or explanations
-- Replace all MathTex(...) calls with Text(...).
-- get_edge_center(direction) returns a 3D coordinate (numpy.ndarray) on the edge of the object in the specified direction.
-- "Generate a valid Manim script compatible with Manim version 0.19.0. Avoid using unsupported keyword arguments like time_width, num_corners, or experimental features. The script should work with standard classes like Scene, Text, Circle, Square, AnimationGroup, FadeIn, Transform, etc. Ensure no errors during rendering."
-Topic: ${msg}`
+        Requirements:
+        - Create a working Python class that inherits from Scene
+        - Use proper Manim imports and syntax
+        - Include step-by-step animation with explanations
+        - Use appropriate colors and positioning
+        - Make it educational and clear
+        - Return ONLY the Python code, no markdown or explanations
+        - Replace all MathTex(...) calls with Text(...).
+        - get_edge_center(direction) returns a 3D coordinate (numpy.ndarray) on the edge of the object in the specified direction.
+        - "Generate a valid Manim script compatible with Manim version 0.19.0. Avoid using unsupported keyword arguments like time_width, num_corners, or experimental features. The script should work with standard classes like Scene, Text, Circle, Square, AnimationGroup, FadeIn, Transform, etc. Ensure no errors during rendering."
+        Topic: ${msg}`
 
         const result = await chat.sendMessage(enhancedPrompt)
         const response = await result.response
@@ -123,36 +130,46 @@ Topic: ${msg}`
        
 
         // Forward request to Flask backend
-        const res  = await axios.post('https://gem2manim-f.onrender.com/render-video', {
-        script: text,
-        filename: "Video"
-        });
-        const data = res.data;
-        console.log(data);
-        if(!data.success) {
+        // const res  = await axios.post('https://gem2manim-f.onrender.com/render-video', {
+        // script: text,
+        // filename: "Video"
+        // });
+
+        await connectDb()
+        const email = user.emailAddresses[0].emailAddress!;
+        if(!email){
             return NextResponse.json({
                 success:false, 
-                url:null,
-                message:"Manim Didn't respond"
+                message:"No user email found"
             })
-        }  
-        console.log(1)
-        console.log(data.video_filename)
-        const resp = await axios.get(`https://gem2manim-f.onrender.com/video/${data.video_filename}`)
-        const dataa = resp.data;
-        console.log(dataa)
-        if(!dataa.success) {
-            return NextResponse.json({
-                success:false, 
-                url : null,
-                message:"SupaBase Didn't respond"
+        }
+        
+        const userId =await User.findOne({email})
+        const newVideo =await Video.create({
+            userId:userId?._id,
+            prompt:msg,
+            videoUrl:"",
+        })
+        try {
+            await inngest.send({
+                name: "video/render.requested",
+                data: {
+                    script: text,
+                    videoId: newVideo._id.toString(),
+                },
+            });
+        } catch (error) {
+            await Video.findByIdAndUpdate(newVideo._id,{
+                status : "failed"
             })
-        }  
+            console.log("inngest nhi chl rha syd")
+        }
+        
+        
 
         return NextResponse.json({ 
             success:true,
-            url:dataa.url,
-            message: 'Here is your video'
+            message: 'Video Generation Started'
         })
         
     } catch (e) {

@@ -1,7 +1,20 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react'
-import { Send , Bot , User , Moon ,Sun } from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast';
+import { Send , Bot , User , Moon ,Sun,Play } from 'lucide-react'
+import { UserButton, useUser } from '@clerk/nextjs'
 import { text } from 'node:stream/consumers'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 interface Message{
   id:string
   content : string
@@ -9,35 +22,75 @@ interface Message{
   isV : boolean
   timestamp : Date
 }
+interface Video{
+  _id:string
+  prompt:string
+  videoUrl: string
+  status?: "success" | "failed" | "processing";
+}
 export default function MainPage() {
   const [msgs , setMsgs] = useState<Message[]>([])
   const [input , setInput] = useState('');
   const [isLoading , setIsLoading] = useState(false)
-  const [darkMode,setDarkMode] = useState(false)
-  const msgEndRef = useRef<HTMLDivElement>(null) //ye reference to a DOM element or store a mutable value that doesn't trigger re-renders when changed
+  const [loadingVideos , setLoadingVideos] = useState(false)
+  const [videos,setVideos] = useState<Video[]>([])
 
-  const scrollToBottom = ()=>{
-    msgEndRef.current?.scrollIntoView({behavior:'smooth'}) // .current refer to actual DOM element , scrollIntoView se vo div view me aa jaega aur usko end me place kr rkha hai to bottom me scroll ho jaega
+  const { user, isLoaded } = useUser();
+
+  useEffect(()=>{
+   if (isLoaded && user) {
+      saveUserInfo();
+    }
+  },[isLoaded,user])
+  
+  useEffect(() => {
+    if (isLoaded && user) {
+      getVideos();
+    }
+  }, [isLoaded, user])
+
+  const getVideos = async()=>{
+    try{
+      setLoadingVideos(true);
+      const res = await fetch('api/videos',{
+        method:'POST',
+        body:JSON.stringify(user)
+      })
+      const ress = await res.json();
+      console.log(ress)
+      // if(ress.success){
+      //   setVideos(ress.videos || [])
+      // }
+      const allVideos: Video[] = ress.videos || [];
+
+      // Find failed videos
+      const failedVideos = allVideos.filter((v) => v.status === "failed");
+      const successfulVideos = allVideos.filter((v) => v.status !== "failed");
+
+      // Show toast and delete failed videos
+      for (const video of failedVideos) {
+        toast.error(`❌ Video generation failed for: "${truncateText(video.prompt, 40)}"`);
+
+        await fetch(`/api/video/${video._id}`, {
+          method: "DELETE",
+        });
+      }
+
+      // Only keep successful ones in UI
+      setVideos(successfulVideos);
+    }catch{
+      console.log('Eroor in fetchin g videos')
+    }
+    finally{
+      setLoadingVideos(false)
+    }
+    
   }
-  useEffect(()=>{
-    scrollToBottom()
-  },[msgs])
-
-  useEffect(()=>{
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    setDarkMode(isDark)
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
-  },[] )
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const newDarkMode = !prev
-      // Apply the dark mode class immediately when toggling
-      //document.documentElement.classList.toggle('dark', newDarkMode) for tailwind v3 
-      document.documentElement.setAttribute('data-theme', newDarkMode ? 'dark' : 'light')
-
-      return newDarkMode
-    })  
+  const saveUserInfo =async ()=>{
+    const res = await fetch('/api/user',{
+      method:'POST',
+      body:JSON.stringify(user),
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +117,8 @@ export default function MainPage() {
         },
         body: JSON.stringify({
           msg: input.trim(),
-          history: msgs
+          history: msgs,
+          user
         }),
       })
 
@@ -110,115 +164,109 @@ export default function MainPage() {
       setIsLoading(false)
     }
   }
-  return (
-    <div className='flex flex-col h-screen bg-gray-50 dark:bg-gray-900'>
-      {/* header */}
-      <div className='flex items-center justify-between bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3'>
-          <div>
-            <h1 className='text-xl font-semibold text-gray-900 dark:text-white'>
-              AI Assistant
-            </h1>
+  const truncateText = (text: string, maxLength: number = 100) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
+   const VideoCard = ({ video }: { video: Video }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+      <div className="relative aspect-video bg-gray-900 group">
+        {video.status ==='success' && video.videoUrl?(
+          <video controls className="w-full h-full object-cover">
+                                  <source src={video.videoUrl} type="video/mp4" />
+                                  Your browser does not support the video tag.
+                    </video>
+        ):(
+<div className="flex h-full flex-col items-center justify-center text-white">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-2" />
+            <p className="text-sm">Generating...</p>
           </div>
-          <button onClick={toggleDarkMode} className='p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'>
-            {
-              darkMode ? (< Sun className='w-5 h-5 text-gray-600 dark:text-gray-300'/>) : (<Moon className='w-5 h-5 text-gray-600 dark:text-gray-300'/>)
-            }
-          </button>
+        )}
+        
+      </div> 
+      <div className="p-4">
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+          {truncateText(video.prompt)}
+        </p>
+        <p className="text-xs text-gray-400 mt-2">
+          Created At{/* {new Date(video.created_at).toLocaleDateString()} */}
+        </p>
       </div>
-      {/* messages */}
-      <div className='flex-1 overflow-y-auto px-4 py-6'>
-        <div className='max-w-4xl mx-auto space-y-6'>
-          {(msgs.length ==0) && (
+    </div>
+  )
+
+
+
+  return (
+    
+    <div className='flex flex-col h-screen bg-gray-50 dark:bg-gray-900'>
+      <Toaster position="bottom-right"
+  reverseOrder={true}/>
+      {/* header */}
+       {/* <Header></Header> */}
+      <div className='h-[60px] flex flex-row items-center justify-between px-4 bg-gray-400 shadow-sm'>
+        <div className='flex items-center space-x-2'>
+            <img className='h-8 w-8' src='https://images.saasworthy.com/videotoprompt_49333_logo_1725883156_c1inh.jpg' alt='image logo'></img>
+            <h1 className='text-lg font-semibold'>Gem2Manim</h1>
+        </div>
+        <div className='flex items-center space-x-4'>
+            <Dialog >
+              <DialogTrigger className='bg-gradient-to-br from-blue-700 to-purple-700 hover:bg-gradient-to-br hover:from-blue-900 hover:to-purple-900 text-white px-3 py-1 rounded hover:bg-blue-700 transition'>+ Create</DialogTrigger>
+              <DialogContent className="w-full max-w-xl">
+
+                <DialogHeader>
+                  <DialogTitle>
+                    <div className='flex gap-2 items-center'>
+                      <Bot className='text-white w-7 h-7 rounded-full p-1 bg-gradient-to-br from-blue-700 to-purple-400'></Bot>
+                      <h3>Create your Video!</h3>
+                    </div>
+                    
+                  </DialogTitle>
+                  <DialogDescription className='text-gray-900 italic'>
+                      Describe what you want to visualize and our AI will generate an educational video using mathematical animations.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className='flex flex-col gap-2'>
+                  <Textarea value={input} onChange={(e)=>{setInput(e.target.value)}} className='w-full max-h-60 overflow-y-auto'></Textarea>
+                  <Button type='submit' disabled={!input.trim() || isLoading} className='bg-gradient-to-br from-blue-700 to-purple-400 hover:bg-gradient-to-br hover:from-blue-900 hover:to-purple-600'>Generate</Button>
+                </form>
+
+              </DialogContent>
+            </Dialog>
+            {/* <button className='bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition'>+ Create</button> */}
+            <UserButton></UserButton>
+        </div>
+    </div>
+
+    {/* ContenT */}
+    <div className='flex-1 overflow-y-auto'>
+        <div className='container mx-auto px-4 py-6'>
+          <div className='mb-6'>
+            <h2 className='text-2xl font-bold text-gray-800 dark:text-white mb-2'>Your Videos</h2>
+            <p className='text-gray-600 dark:text-gray-300'>Mathematical animations generated by AI</p>
+          </div>
+
+          {loadingVideos ? (
+            <div className='flex items-center justify-center py-12'>
+              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+              <span className='ml-2 text-gray-600 dark:text-gray-300'>Loading videos...</span>
+            </div>
+          ) : videos.length === 0 ? (
             <div className='text-center py-12'>
-              <div className='w-24 h-24 bg-gradient-to-t from-blue-500 to-purple-300 rounded-full flex items-center justify-center mx-auto mb-4'>
-                <Bot className='w-12 h-12 text-white'/>
-              </div>
-              <h2 className='text-2xl font-semibold text-gray-900 dark:text-white mb-2'>
-                How Can i Help YOu ?
-              </h2>
-              <p className='text-gray-600 dark:text-gray-400'>
-                Start a converstation
-              </p>
+              <Bot className='bg-gradient-to-br from-blue-700 to-purple-700 rounded-full w-24 h-24 p-4 text-white mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2'>No videos yet</h3>
+              <p className='text-gray-500 dark:text-gray-400'>Create your first mathematical animation by clicking the "+ Create" button above.</p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+              {videos.map((video) => (
+                <VideoCard key={video._id} video={video} />
+              ))}
             </div>
           )}
-
-          {msgs.map((msg)=>(
-            <div key={msg.id} className={`flex ${msg.role == 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex max-w-3xl ${msg.role == 'user'? 'flex-row-reverse':'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role == 'user'? 'bg-blue-500 ml-3':'bg-gray-200 dark:bg-gray-700 mr-3'}`}>
-                  {msg.role=='user'?(
-                    <User className="w-5 h-5 text-white" />
-                  ):(
-                    <Bot className="w-5 h-5 bg-gradient-to-t from-blue-500 to-purple-300" />
-                  )
-                  }
-                </div>
-                <div className={`px-4 py-3 rounded-2xl ${msg.role =='user'?'bg-blue-500 text-white':'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'}`}>
-                  {
-                    msg.isV ? (<video controls className="max-w-md rounded-lg">
-                      <source src={msg.content} type="video/mp4" />
-                      Your browser does not support the video tag.
-                      </video>):(
-                      <p className='whitespace-pre-wrap'>{msg.content}</p>
-                      )
-                  }
-                  
-                 
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {isLoading&&(
-            <div className='flex justify-start'>
-              <div className='flex max-w-3xl'>
-                <div className='bg-gradient-to-t from-blue-500 to-purple-300 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3'>
-                  <Bot className='w-5 h-5 text-gray-600 dark:text-gray-300'/>
-                </div>
-                <div className='px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'>
-                  <div className='flex spacex-x-1'>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse "></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-100"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-200"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={msgEndRef} /> 
         </div>
       </div>
-
-      {/* input */}
-      <div className='border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4'>
-        <form onSubmit={handleSubmit} className='max-w-3xl mx-auto'>
-          <div className='flex items-center space-x-3'>
-            <div className='flex-1'>
-              <textarea
-                rows={1}
-                value={input}
-                onChange={(e)=>{
-                  setInput(e.target.value)
-                  const textarea = e.target
-                  textarea.style.height = 'auto'
-                  textarea.style.height = Math.min(textarea.scrollHeight,200)+'px'
-                }}
-                placeholder="Type your message..."
-                style={{minHeight:'40px',maxHeight:'200px'}}
-                className='w-full h-12 px-4 py-2 border-none border border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 resize-none bg-white dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400'
-              />
-            </div>
-            <div>
-              <button type='submit' disabled={!input.trim() || isLoading} className='p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-300'>
-                <Send className='w-5 h-5'/>
-              </button>
-            </div>
-              
-            
-          </div>
-        </form>
-      </div>
+      
 
     </div>
   )
