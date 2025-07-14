@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState,useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
 import { Send , Bot , User , Moon ,Sun,Play } from 'lucide-react'
 import { UserButton, useUser } from '@clerk/nextjs'
@@ -7,6 +7,7 @@ import { text } from 'node:stream/consumers'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -37,30 +38,25 @@ export default function MainPage() {
 
   const { user, isLoaded } = useUser();
 
-  useEffect(()=>{
-   if (isLoaded && user) {
-      saveUserInfo();
-    }
-  },[isLoaded,user])
-  
-  useEffect(() => {
-    if (isLoaded && user) {
-      getVideos();
-    }
-  }, [isLoaded, user])
+   const saveUserInfo = useCallback(async () => {
+    if (!user) return;
+    const res = await fetch('/api/user', {
+      method: 'POST',
+      body: JSON.stringify(user),
+    })
+  }, [user]);
 
-  const getVideos = async()=>{
-    try{
+  const getVideos = useCallback(async () => {
+    if (!user) return;
+    try {
       setLoadingVideos(true);
-      const res = await fetch('api/videos',{
-        method:'POST',
-        body:JSON.stringify(user)
+      const res = await fetch('api/videos', {
+        method: 'POST',
+        body: JSON.stringify(user)
       })
       const ress = await res.json();
       console.log(ress)
-      // if(ress.success){
-      //   setVideos(ress.videos || [])
-      // }
+      
       const allVideos: Video[] = ress.videos || [];
 
       // Find failed videos
@@ -69,7 +65,7 @@ export default function MainPage() {
 
       // Show toast and delete failed videos
       for (const video of failedVideos) {
-        toast.error(`❌ Video generation failed for: "${truncateText(video.prompt, 40)}"`);
+        toast.error(`❌ Video generation failed for: &quot;${truncateText(video.prompt, 40)}&quot;`);
 
         await fetch(`/api/video/${video._id}`, {
           method: "DELETE",
@@ -78,20 +74,25 @@ export default function MainPage() {
 
       // Only keep successful ones in UI
       setVideos(successfulVideos);
-    }catch{
-      console.log('Eroor in fetchin g videos')
-    }
-    finally{
+    } catch {
+      console.log('Error in fetching videos')
+    } finally {
       setLoadingVideos(false)
     }
-    
-  }
-  const saveUserInfo =async ()=>{
-    const res = await fetch('/api/user',{
-      method:'POST',
-      body:JSON.stringify(user),
-    })
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      saveUserInfo();
+    }
+  }, [isLoaded, user, saveUserInfo])
+  
+  useEffect(() => {
+    if (isLoaded && user) {
+      getVideos();
+    }
+  }, [isLoaded, user, getVideos])
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -206,7 +207,8 @@ export default function MainPage() {
        {/* <Header></Header> */}
       <div className='h-[60px] flex flex-row items-center justify-between px-4 bg-gray-400 shadow-sm'>
         <div className='flex items-center space-x-2'>
-            <img className='h-8 w-8' src='https://images.saasworthy.com/videotoprompt_49333_logo_1725883156_c1inh.jpg' alt='image logo'></img>
+            <Image className='h-8 w-8'width={32}
+              height={32} src='https://images.saasworthy.com/videotoprompt_49333_logo_1725883156_c1inh.jpg' alt='image logo'/>
             <h1 className='text-lg font-semibold'>Gem2Manim</h1>
         </div>
         <div className='flex items-center space-x-4'>
@@ -255,7 +257,7 @@ export default function MainPage() {
             <div className='text-center py-12'>
               <Bot className='bg-gradient-to-br from-blue-700 to-purple-700 rounded-full w-24 h-24 p-4 text-white mx-auto mb-4' />
               <h3 className='text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2'>No videos yet</h3>
-              <p className='text-gray-500 dark:text-gray-400'>Create your first mathematical animation by clicking the "+ Create" button above.</p>
+              <p className='text-gray-500 dark:text-gray-400'>Create your first mathematical animation by clicking the &quot;+ Create&quot; button above.</p>
             </div>
           ) : (
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
