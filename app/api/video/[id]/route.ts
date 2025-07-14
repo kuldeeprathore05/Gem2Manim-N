@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/config/database";
 import Video from "@/models/Video";
+
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 export async function DELETE(req: NextRequest, { params }: Params ) {
   try {
