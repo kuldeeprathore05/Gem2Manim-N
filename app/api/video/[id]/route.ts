@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/config/database";
 import Video from "@/models/Video";
-
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+type Params = {
+  params: {
+    id: string;
+  };
+};
+export async function DELETE(req: NextRequest, { params }: Params ) {
   try {
     await connectDb();
     const { id } =await params;
