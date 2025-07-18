@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useRef, useState,useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
+import {formatDistanceToNow } from 'date-fns'
 import { Send , Bot , User , Moon ,Sun,Play } from 'lucide-react'
 import { UserButton, useUser } from '@clerk/nextjs'
 import { text } from 'node:stream/consumers'
@@ -28,6 +29,7 @@ interface Video{
   prompt:string
   videoUrl: string
   status?: "success" | "failed" | "processing";
+  createdAt:string
 }
 export default function MainPage() {
   const [msgs , setMsgs] = useState<Message[]>([])
@@ -196,7 +198,7 @@ export default function MainPage() {
           {truncateText(video.prompt)}
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          Created At{/* {new Date(video.created_at).toLocaleDateString()} */}
+          Created {formatDistanceToNow(new Date(video.createdAt),{addSuffix:true})}
         </p>
       </div>
     </div>
