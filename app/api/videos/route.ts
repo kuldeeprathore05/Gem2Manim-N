@@ -3,8 +3,8 @@ import connectDb from '../../../config/database'
 import Video from "@/models/Video";
 import User from "@/models/User";
 export async function POST(req:NextRequest){
-    const user =await req.json();
-
+    const body =await req.json();
+    const user = body.user
     const email = user.emailAddresses[0].emailAddress!;
     if(!email){
         return NextResponse.json({

@@ -42,7 +42,10 @@ export default function MainPage() {
     if (!user) return;
     const res = await fetch('/api/user', {
       method: 'POST',
-      body: JSON.stringify(user),
+       headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({user}),
     })
   }, [user]);
 
@@ -52,7 +55,10 @@ export default function MainPage() {
       setLoadingVideos(true);
       const res = await fetch('api/videos', {
         method: 'POST',
-        body: JSON.stringify(user)
+         headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({user})
       })
       const ress = await res.json();
       console.log(ress)
