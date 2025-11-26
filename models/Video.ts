@@ -1,23 +1,33 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, model, models } from "mongoose";
 
-const videoSchema = new mongoose.Schema({
-    userId :{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'User',
-        required:true
+const VideoSchema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    prompt:{
-        type:String
+    prompt: {
+      type: String,
+      required: true,
     },
-    videoUrl:{
-        type:String
+    videoUrl: {
+      type: String,
+      default: "",
     },
-    status:{
-        type:String,
-        enum:["processing","success","failed"],
-        default:"processing"
-    }
-},{timestamps:true})
+    // THIS WAS THE CAUSE OF THE ERROR
+    status: {
+      type: String,
+      enum: ["pending", "processing", "completed", "failed"], 
+      default: "pending",
+    },
+    script: {
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
 
-// export default mongoose.model('Video',videoSchema)
-export default mongoose.models.Video || mongoose.model('Video', videoSchema);
+const Video = models.Video || model("Video", VideoSchema);
+
+export default Video;
