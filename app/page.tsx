@@ -1,14 +1,12 @@
 'use client'
-import React, { useEffect, useRef, useState,useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
-import {formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { Bot, Play, Trash2, Loader2, Sparkles, Video as VideoIcon, RefreshCw } from 'lucide-react'
 import { UserButton, useUser } from '@clerk/nextjs'
-import { text } from 'node:stream/consumers'
+// REMOVED: import { text } from 'node:stream/consumers' <--- This was causing the crash
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -17,39 +15,43 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-interface Message{
-  id:string
-  content : string
-  role : 'user' | 'assistant'
-  isV : boolean
-  timestamp : Date
+
+interface Message {
+  id: string
+  content: string
+  role: 'user' | 'assistant'
+  isV: boolean
+  timestamp: Date
 }
-interface Video{
-  _id:string
-  prompt:string
+
+interface Video {
+  _id: string
+  prompt: string
   videoUrl: string
-  status?: "completed" | "failed" | "processing"| "pending";
-  createdAt:string
-} 
+  // Support both old ('success') and new ('completed') statuses
+  status: "completed" | "success" | "failed" | "processing" | "pending";
+  createdAt: string
+}
+
 export default function MainPage() {
-  const [msgs , setMsgs] = useState<Message[]>([])
-  const [input , setInput] = useState('');
-  const [isLoading , setIsLoading] = useState(false)
-  const [loadingVideos , setLoadingVideos] = useState(false)
-  const [videos,setVideos] = useState<Video[]>([])
+  const [msgs, setMsgs] = useState<Message[]>([])
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingVideos, setLoadingVideos] = useState(true) 
+  const [videos, setVideos] = useState<Video[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const { user, isLoaded } = useUser();
 
-   const saveUserInfo = useCallback(async () => {
+  const saveUserInfo = useCallback(async () => {
     if (!user) return;
-    const res = await fetch('/api/user', {
-      method: 'POST',
-       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({user}),
-    })
+    try {
+        await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user }),
+        })
+    } catch (e) { console.log("User save error", e) }
   }, [user]);
 
   const getVideos = useCallback(async (isBackgroundRefresh = false) => {
@@ -79,14 +81,14 @@ export default function MainPage() {
     if(!confirm("Are you sure you want to delete this video?")) return;
 
     const newVideos = videos.filter(v => v._id !== videoId);
-    setVideos(newVideos);  
+    setVideos(newVideos); 
     toast.success("Video deleted");
 
     try {
       await fetch(`/api/video/${videoId}`, { method: "DELETE" });
     } catch (err) {
       toast.error("Failed to delete video");
-      getVideos();  
+      getVideos(); 
     }
   }
 
@@ -97,13 +99,14 @@ export default function MainPage() {
     }
   }, [isLoaded, user, saveUserInfo, getVideos])
 
+  // Auto-polling logic
   useEffect(() => {
     const hasPending = videos.some(v => v.status === 'pending' || v.status === 'processing');
     let interval: NodeJS.Timeout;
 
     if (hasPending) {
       interval = setInterval(() => {
-        getVideos(true);  
+        getVideos(true);
       }, 5000);
     }
 
@@ -113,7 +116,7 @@ export default function MainPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
- 
+
     const tempId = Date.now().toString();
     const userMessage: Message = {
       id: tempId,
@@ -128,7 +131,7 @@ export default function MainPage() {
     setInput('')
     setIsLoading(true)
     setIsDialogOpen(false) 
-    toast.success("Generation started! It will appear in your list shortly.")
+    toast.success("Generation started!")
 
     try {
       const response = await fetch('/api/chat', {
@@ -142,7 +145,8 @@ export default function MainPage() {
       })
 
       if (!response.ok) throw new Error('Failed to start generation')
- 
+      
+      // Refresh immediately to show pending card
       getVideos(true);
 
     } catch (error) {
@@ -153,7 +157,8 @@ export default function MainPage() {
     }
   }
 
-  const truncateText = (text: string, maxLength: number = 100) => {
+  const truncateText = (text: string, maxLength: number = 80) => {
+    if (!text) return "";
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength) + '...'
   }
@@ -174,44 +179,18 @@ export default function MainPage() {
             Failed
           </div>
         );
+      case 'completed':
+      case 'success':
+        return null;
       default:
         return null;
     }
   }
-   const VideoCard = ({ video }: { video: Video }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
-      <div className="relative aspect-video bg-gray-900 group">
-        {video.status ==='completed' && video.videoUrl?(
-          <video controls className="w-full h-full object-cover">
-                                  <source src={video.videoUrl} type="video/mp4" />
-                                  Your browser does not support the video tag.
-                    </video>
-        ):(
-<div className="flex h-full flex-col items-center justify-center text-white">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mb-2" />
-            <p className="text-sm">Generating...</p>
-          </div>
-        )}
-        
-      </div> 
-      <div className="p-4">
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-          {truncateText(video.prompt)}
-        </p>
-        <p className="text-xs text-gray-400 mt-2">
-          Created {formatDistanceToNow(new Date(video.createdAt),{addSuffix:true})}
-        </p>
-      </div>
-    </div>
-  )
-
-
 
   return (
-    
     <div className='flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950'>
-      <Toaster position="bottom-right" reverseOrder={false}/> 
-
+      <Toaster position="bottom-right" reverseOrder={false}/>
+      
       <div className='sticky top-0 z-50 h-16 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800'>
         <div className='flex items-center space-x-3'>
           <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-1.5 rounded-lg shadow-md">
@@ -221,6 +200,7 @@ export default function MainPage() {
             Gem2Manim
           </h1>
         </div>
+        
         <div className='flex items-center space-x-4'>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -262,32 +242,32 @@ export default function MainPage() {
               </form>
             </DialogContent>
           </Dialog>
-          <UserButton/>
+          <UserButton afterSignOutUrl="/" />
         </div>
       </div>
 
-    {/* ContenT */}
-    <main className='flex-1 container mx-auto px-4 md:px-8 py-8 max-w-7xl'>
-      <div className='flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8'>
-        <div>
-          <h2 className='text-3xl font-bold text-gray-900 dark:text-white'>Your Library</h2>
-          <p className='text-gray-500 dark:text-gray-400 mt-1'>
-            {videos.length} {videos.length === 1 ? 'video' : 'videos'} generated
-          </p>
-        </div>
+      <main className='flex-1 container mx-auto px-4 md:px-8 py-8 max-w-7xl'>
         
-        {/* Manual Refresh Button */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => getVideos(false)}
-          className="text-gray-600 gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${loadingVideos ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-      {loadingVideos && videos.length === 0 ? (
+        <div className='flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8'>
+          <div>
+            <h2 className='text-3xl font-bold text-gray-900 dark:text-white'>Your Library</h2>
+            <p className='text-gray-500 dark:text-gray-400 mt-1'>
+              {videos.length} {videos.length === 1 ? 'video' : 'videos'} generated
+            </p>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => getVideos(false)}
+            className="text-gray-600 gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loadingVideos ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {loadingVideos && videos.length === 0 ? (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden h-[300px] animate-pulse">
@@ -300,7 +280,6 @@ export default function MainPage() {
             ))}
           </div>
         ) : videos.length === 0 ? (
-          // Empty State
           <div className='flex flex-col items-center justify-center py-20 text-center'>
             <div className='bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6'>
               <VideoIcon className='w-12 h-12 text-gray-400' />
@@ -318,7 +297,6 @@ export default function MainPage() {
             </Button>
           </div>
         ) : (
-          // Video Grid
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
             {videos.map((video) => (
               <div 
@@ -328,7 +306,8 @@ export default function MainPage() {
                 <div className="relative aspect-video bg-gray-900">
                   <StatusBadge status={video.status} />
                   
-                  {video.status === 'completed' && video.videoUrl ? (
+                  {/* FIX: Check for both 'completed' AND 'success' */}
+                  {(video.status === 'completed' || video.status === 'success') && video.videoUrl ? (
                     <video 
                       controls 
                       className="w-full h-full object-cover"
@@ -391,11 +370,7 @@ export default function MainPage() {
             ))}
           </div>
         )}
-      
       </main>
-      
-
     </div>
   )
 }
-
