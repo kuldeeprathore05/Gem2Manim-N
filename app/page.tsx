@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState,useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
 import {formatDistanceToNow } from 'date-fns'
 import { Bot, Play, Trash2, Loader2, Sparkles, Video as VideoIcon, RefreshCw } from 'lucide-react'
-// import { UserButton, useUser } from '@clerk/nextjs'
+import { UserButton, useUser } from '@clerk/nextjs'
 import { text } from 'node:stream/consumers'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -30,14 +30,7 @@ interface Video{
   videoUrl: string
   status?: "completed" | "failed" | "processing"| "pending";
   createdAt:string
-}
-const useUser = () => ({
-  user: { id: "mock_user", primaryEmailAddress: { emailAddress: "user@example.com" } },
-  isLoaded: true,
-  isSignedIn: true
-});
-const UserButton = () => <div className="h-8 w-8 bg-blue-500 rounded-full cursor-pointer" title="Mock User Profile" />;
-
+} 
 export default function MainPage() {
   const [msgs , setMsgs] = useState<Message[]>([])
   const [input , setInput] = useState('');
@@ -242,7 +235,7 @@ export default function MainPage() {
                   <span className="text-blue-600">✨</span> Create New Animation
                 </DialogTitle>
                 <DialogDescription className="text-base pt-2">
-                  Describe the concept you want to visualize (e.g. "Binary Search", "Solar System", "Sorting Algorithms").
+                  Describe the concept you want to visualize (e.g. &quot;Binary Search&quot;, &quot;Solar System&quot;).
                 </DialogDescription>
               </DialogHeader>
               
