@@ -19,7 +19,8 @@ export const renderVideo = inngest.createFunction(
     
     // 1. Call Flask to render video
     const res = await step.run("Render with Manim", async () => {
-      const response = await axios.post("http://127.0.0.1:5000/render-video", {
+      // const response = await axios.post("http://127.0.0.1:5000/render-video", {
+      const response = await axios.post("https://gem2manim-f.onrender.com/render-video", {
         script: script,
         filename: "Video",
       }, {
