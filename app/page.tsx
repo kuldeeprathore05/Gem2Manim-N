@@ -28,7 +28,7 @@ interface Video{
   _id:string
   prompt:string
   videoUrl: string
-  status?: "success" | "failed" | "processing"| "pending";
+  status?: "completed" | "failed" | "processing"| "pending";
   createdAt:string
 }
 export default function MainPage() {
@@ -181,7 +181,7 @@ export default function MainPage() {
    const VideoCard = ({ video }: { video: Video }) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
       <div className="relative aspect-video bg-gray-900 group">
-        {video.status ==='success' && video.videoUrl?(
+        {video.status ==='completed' && video.videoUrl?(
           <video controls className="w-full h-full object-cover">
                                   <source src={video.videoUrl} type="video/mp4" />
                                   Your browser does not support the video tag.
@@ -328,7 +328,7 @@ export default function MainPage() {
                 <div className="relative aspect-video bg-gray-900">
                   <StatusBadge status={video.status} />
                   
-                  {video.status === 'success' && video.videoUrl ? (
+                  {video.status === 'completed' && video.videoUrl ? (
                     <video 
                       controls 
                       className="w-full h-full object-cover"
