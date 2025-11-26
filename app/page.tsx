@@ -2,8 +2,8 @@
 import React, { useEffect, useRef, useState,useCallback } from 'react'
 import toast, { Toaster } from 'react-hot-toast';
 import {formatDistanceToNow } from 'date-fns'
-import { Send , Bot , User , Moon ,Sun,Play, Loader2, Sparkles, RefreshCw, Trash2, VideoIcon } from 'lucide-react'
-import { UserButton, useUser } from '@clerk/nextjs'
+import { Bot, Play, Trash2, Loader2, Sparkles, Video as VideoIcon, RefreshCw } from 'lucide-react'
+// import { UserButton, useUser } from '@clerk/nextjs'
 import { text } from 'node:stream/consumers'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,13 @@ interface Video{
   status?: "completed" | "failed" | "processing"| "pending";
   createdAt:string
 }
+const useUser = () => ({
+  user: { id: "mock_user", primaryEmailAddress: { emailAddress: "user@example.com" } },
+  isLoaded: true,
+  isSignedIn: true
+});
+const UserButton = () => <div className="h-8 w-8 bg-blue-500 rounded-full cursor-pointer" title="Mock User Profile" />;
+
 export default function MainPage() {
   const [msgs , setMsgs] = useState<Message[]>([])
   const [input , setInput] = useState('');
@@ -262,7 +269,7 @@ export default function MainPage() {
               </form>
             </DialogContent>
           </Dialog>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton/>
         </div>
       </div>
 
